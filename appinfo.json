@@ -1,0 +1,33 @@
+{
+    "appKeys": {
+        "PHONE_CLOUDS_KEY": 1,
+        "PHONE_TEMPERATURE_KEY": 0
+    },
+    "capabilities": [
+        "location"
+    ],
+    "companyName": "JMillage",
+    "longName": "Fancy Face",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/menu.png",
+                "menuIcon": true,
+                "name": "MENU_IMAGE",
+                "type": "png"
+            }
+        ]
+    },
+    "sdkVersion": "3",
+    "shortName": "Fancy Face",
+    "targetPlatforms": [
+        "aplite",
+        "basalt"
+    ],
+    "uuid": "8cb60441-3eb3-47b1-a6eb-d35b3f1f4a33",
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": true
+    }
+}
