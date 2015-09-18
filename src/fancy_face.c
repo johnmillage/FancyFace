@@ -1,8 +1,14 @@
 #include <pebble.h>
 
 #define COLOR_SCHEME_KEY 1
+#define COLOR_TYPE_KEY 2
+#define TEMP_TYPE_KEY 3
+    
 #define PHONE_TEMPERATURE_KEY 0x0
 #define PHONE_CLOUDS_KEY 0x1
+#define PHONE_COLOR_KEY 0x2
+#define PHONE_TEMP_TYPE_KEY 0x3
+#define PHONE_TEMPERATURE_C_KEY 0x4
     
 static Window *window;
 static Layer *s_simple_bg_layer, *s_date_layer, *s_hands_layer;
@@ -10,8 +16,10 @@ static TextLayer *s_day_label, *s_num_label, *s_twelve_label, *s_temperature_lab
 static AppSync s_sync;
 static uint8_t s_sync_buffer[64];
 static int32_t s_clouds_pct;
-static char s_num_buffer[4], s_day_buffer[6], s_temp_buffer[6];
-static int32_t s_cur_color_scheme; 
+static char s_num_buffer[4], s_day_buffer[6], s_temp_buffer[6], s_temp_c_buffer[6];
+static int32_t s_cur_color_scheme;
+static int32_t s_cur_color_type;
+static int32_t s_cur_temp_type;
 static GColor s_back_color;
 static GColor s_fore_color;
 static GColor s_fore_light;
@@ -220,6 +228,37 @@ static void draw_compass_ticks(Layer *layer, GContext *ctx)
 
 static void set_color_scheme(){
     #ifdef PBL_PLATFORM_BASALT
+    if(s_cur_color_type == 3){
+        s_cur_color_scheme = 0;
+    }
+    else if(s_cur_color_type == 4){
+        s_cur_color_scheme = 1;
+    }
+    else if(s_cur_color_type == 5){
+        s_cur_color_scheme = 2;
+    }
+    else if(s_cur_color_type == 6){
+        s_cur_color_scheme = 3;
+    }
+    else if(s_cur_color_type == 7){
+        s_cur_color_scheme = 4;
+    }
+    else if(s_cur_color_type == 8){
+        s_cur_color_scheme = 5;
+    }
+    else if(s_cur_color_type == 1){
+        if(s_cur_color_scheme == 0)
+            s_cur_color_scheme = 1;
+        else if(s_cur_color_scheme == 3 || s_cur_color_scheme == 4)
+            s_cur_color_scheme = 5;
+    }
+    else if(s_cur_color_type == 2){
+         if(s_cur_color_scheme == 1 || s_cur_color_scheme == 2)
+            s_cur_color_scheme = 3;
+        else if(s_cur_color_scheme == 5)
+            s_cur_color_scheme = 0;
+    }
+    
     switch(s_cur_color_scheme){
         case 0:
             s_back_color = GColorWhite;
@@ -267,6 +306,18 @@ static void set_color_scheme(){
     }
     #else
         s_line_width = 1;
+        APP_LOG(APP_LOG_LEVEL_ERROR, "before %d %d", (int)s_cur_color_type, (int)s_cur_color_scheme );
+        if(s_cur_color_type != 0)
+            {
+             if(s_cur_color_type == 2 ||  s_cur_color_type == 3 || s_cur_color_type == 5 || s_cur_color_type == 6){
+                s_cur_color_scheme = 0;
+             }
+            else{
+                s_cur_color_scheme = 1;
+            }
+        }
+       
+        APP_LOG(APP_LOG_LEVEL_ERROR, "after %d %d", (int)s_cur_color_type, (int)s_cur_color_scheme );
         switch(s_cur_color_scheme){
         case 0:
         case 2:
@@ -302,7 +353,7 @@ static void draw_partial_circle( Layer *layer, GContext *ctx, uint32_t pct, GPoi
             #ifdef PBL_PLATFORM_BASALT
             graphics_context_set_stroke_color(ctx, s_fore_dark);
             #else
-            graphics_context_set_stroke_color(ctx, GColorClear);
+            graphics_context_set_stroke_color(ctx, s_back_color);
             #endif
         }
         else{
@@ -526,7 +577,13 @@ static void date_update_proc(Layer *layer, GContext *ctx)
   text_layer_set_text_color(s_twelve_label, s_fore_color);
   text_layer_set_text_color(s_temperature_label, s_fore_color);
   text_layer_set_text_color(s_pebble_label, s_fore_color);
-  text_layer_set_text(s_temperature_label, s_temp_buffer);
+  if(s_cur_temp_type != 0){
+      text_layer_set_text(s_temperature_label, s_temp_c_buffer);
+  }
+  else{
+      text_layer_set_text(s_temperature_label, s_temp_buffer);
+  }
+  
     
   text_layer_set_text(s_day_label, s_day_buffer);
 
@@ -575,7 +632,8 @@ static void handle_tap(AccelAxisType axis, int32_t direction){
     set_color_scheme();
     layer_mark_dirty(s_hands_layer);
     persist_write_int(COLOR_SCHEME_KEY , s_cur_color_scheme);
-    
+    persist_write_int(COLOR_TYPE_KEY , s_cur_color_type);
+    persist_write_int(TEMP_TYPE_KEY , s_cur_temp_type);
 }
 
 char *translate_error(AppMessageResult result) {
@@ -608,9 +666,24 @@ static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tup
       // App Sync keeps new_tuple in s_sync_buffer, so we may use it directly
       strcpy( s_temp_buffer, new_tuple->value->cstring);      
   }
+  else if(key == PHONE_TEMPERATURE_C_KEY){
+      // App Sync keeps new_tuple in s_sync_buffer, so we may use it directly
+      strcpy( s_temp_c_buffer, new_tuple->value->cstring);      
+  }
   else if(key == PHONE_CLOUDS_KEY){
       s_clouds_pct = new_tuple->value->int32;
   }
+  else if(key == PHONE_COLOR_KEY){
+      s_cur_color_type = new_tuple->value->int32;
+  }
+  else if(key == PHONE_TEMP_TYPE_KEY){
+      s_cur_temp_type = new_tuple->value->int32;
+  }
+    set_color_scheme();
+    layer_mark_dirty(s_hands_layer);
+    persist_write_int(COLOR_SCHEME_KEY , s_cur_color_scheme);
+    persist_write_int(COLOR_TYPE_KEY , s_cur_color_type);
+    persist_write_int(TEMP_TYPE_KEY , s_cur_temp_type);
 }
 
 
@@ -629,6 +702,21 @@ static void window_load(Window *window)
   {
       s_cur_color_scheme = 0;
   }
+  if(persist_exists(COLOR_TYPE_KEY)){
+    s_cur_color_type = persist_read_int(COLOR_TYPE_KEY);
+  }
+  else
+  {
+      s_cur_color_scheme = 0;
+  }
+  if(persist_exists(TEMP_TYPE_KEY)){
+    s_cur_temp_type = persist_read_int(TEMP_TYPE_KEY);
+  }
+  else
+  {
+      s_cur_color_scheme = 0;
+  }
+  
   APP_LOG(APP_LOG_LEVEL_INFO, "after load %d", (int)s_cur_color_scheme);
   set_color_scheme();
     
@@ -693,7 +781,10 @@ static void window_load(Window *window)
 
   Tuplet initial_values[] = {
     TupletCString(PHONE_TEMPERATURE_KEY, "---"),
-    TupletInteger(PHONE_CLOUDS_KEY, (uint32_t)0)
+    TupletCString(PHONE_TEMPERATURE_C_KEY, "---"),
+    TupletInteger(PHONE_CLOUDS_KEY, (int32_t)0),
+    TupletInteger(PHONE_COLOR_KEY, (int32_t)s_cur_color_type),
+    TupletInteger(PHONE_TEMP_TYPE_KEY, (int32_t)s_cur_temp_type)
   };
     
     app_sync_init(&s_sync, s_sync_buffer, sizeof(s_sync_buffer),
@@ -725,11 +816,10 @@ static void init()
   s_day_buffer[0] = '\0';
   s_num_buffer[0] = '\0';
   s_temp_buffer[0] = '\0';
+  s_temp_c_buffer[0] = '\0'; 
   tick_timer_service_subscribe(SECOND_UNIT, handle_second_tick);
   accel_tap_service_subscribe(handle_tap);
-    
 
-  
   app_message_open(64, 64);
   
 }

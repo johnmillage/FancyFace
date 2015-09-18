@@ -1,10 +1,14 @@
 {
     "appKeys": {
         "PHONE_CLOUDS_KEY": 1,
-        "PHONE_TEMPERATURE_KEY": 0
+        "PHONE_COLOR_KEY": 2,
+        "PHONE_TEMPERATURE_C_KEY": 4,
+        "PHONE_TEMPERATURE_KEY": 0,
+        "PHONE_TEMP_TYPE_KEY": 3
     },
     "capabilities": [
-        "location"
+        "location",
+        "configurable"
     ],
     "companyName": "JMillage",
     "longName": "Fancy Face",
@@ -26,7 +30,7 @@
         "basalt"
     ],
     "uuid": "8cb60441-3eb3-47b1-a6eb-d35b3f1f4a33",
-    "versionLabel": "1.0",
+    "versionLabel": "1.4",
     "watchapp": {
         "watchface": true
     }
