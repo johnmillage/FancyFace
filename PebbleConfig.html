@@ -25,6 +25,10 @@
         <option>Green</option>
         <option>Red</option>
     </select>
+    Seconds:&nbsp; <select id="seconds_picker" name="D3">
+        <option>ON</option>
+        <option>OFF</option>
+    </select>
     <br/>
     <br/>
     <input id="Save" type="button" value="Save" />
@@ -53,14 +57,16 @@
         function getConfigData() {
             var backgroundColorPicker = document.getElementById('color_picker');
             var temperaturePicker = document.getElementById('temperature_picker');
-
+            var secondsPicker = document.getElementById('seconds_picker');
             var options = {
                 'background_color': backgroundColorPicker.value,
-                'temperature_type': temperaturePicker.value
+                'temperature_type': temperaturePicker.value,
+                'seconds_type': secondsPicker.value
             };
             // Save for next launch
             localStorage['background_color'] = options['background_color'];
             localStorage['temperature_type'] = options['temperature_type'];
+            localStorage['seconds_type'] = options['seconds_type'];
             console.log('Got options: ' + JSON.stringify(options));
             return options;
         }
@@ -68,10 +74,12 @@
         (function () {
             var backgroundColorPicker = document.getElementById('color_picker');
             var temperaturePicker = document.getElementById('temperature_picker');
+            var secondsPicker = document.getElementById('seconds_picker');
             // Load any previously saved configuration, if available
-            if (localStorage['high_contrast']) {
-                temperaturePicker.value = JSON.parse(localStorage['temperature_picker']);
+            if (localStorage['temperature_type']) {
+                temperaturePicker.value = localStorage['temperature_type'];
                 backgroundColorPicker.value = localStorage['background_color'];
+                secondsPicker.value = localStorage['seconds_type'];
             }
         })();
     </script>
