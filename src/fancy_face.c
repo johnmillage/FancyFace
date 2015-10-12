@@ -3,18 +3,20 @@
 #define COLOR_SCHEME_KEY 1
 #define COLOR_TYPE_KEY 2
 #define TEMP_TYPE_KEY 3
+#define SECONDS_KEY 4
     
-#define PHONE_TEMPERATURE_KEY 0x0
-#define PHONE_CLOUDS_KEY 0x1
-#define PHONE_COLOR_KEY 0x2
-#define PHONE_TEMP_TYPE_KEY 0x3
-#define PHONE_TEMPERATURE_C_KEY 0x4
+#define PHONE_TEMPERATURE_KEY 0
+#define PHONE_CLOUDS_KEY 1
+#define PHONE_COLOR_KEY 2
+#define PHONE_TEMP_TYPE_KEY 3
+#define PHONE_TEMPERATURE_C_KEY 4
+#define PHONE_SECONDS_KEY 5
     
 static Window *window;
 static Layer *s_simple_bg_layer, *s_date_layer, *s_hands_layer;
 static TextLayer *s_day_label, *s_num_label, *s_twelve_label, *s_temperature_label, *s_pebble_label;
 static AppSync s_sync;
-static uint8_t s_sync_buffer[64];
+static uint8_t s_sync_buffer[96];
 static int32_t s_clouds_pct;
 static char s_num_buffer[4], s_day_buffer[6], s_temp_buffer[6], s_temp_c_buffer[6];
 static int32_t s_cur_color_scheme;
@@ -26,6 +28,7 @@ static GColor s_fore_light;
 static GColor s_fore_dark;
 static GColor s_fore_special;
 static bool s_needs_weather;
+static int32_t s_show_seconds;
 
 #ifdef PBL_SDK_3
 static void graphics_draw_line2(GContext *ctx, GPoint p0, GPoint p1){
@@ -465,6 +468,7 @@ static void hands_update_proc(Layer *layer, GContext *ctx)
     
     #ifdef PBL_PLATFORM_BASALT  //no second hand on aplite  too busy
     // dot in the middle
+    
     graphics_context_set_fill_color(ctx, s_fore_special);
     graphics_fill_circle(ctx, center, 3);
     int32_t second_angle = TRIG_MAX_ANGLE * t->tm_sec / 60;
@@ -475,9 +479,11 @@ static void hands_update_proc(Layer *layer, GContext *ctx)
     };
 
     // second hand
-    graphics_context_set_stroke_color(ctx, s_fore_special);
-    graphics_context_set_stroke_width(ctx,  1 );
-    graphics_draw_line2(ctx, second_hand, center);
+    if(s_show_seconds == 1){
+        graphics_context_set_stroke_color(ctx, s_fore_special);
+        graphics_context_set_stroke_width(ctx,  1 );
+        graphics_draw_line2(ctx, second_hand, center);
+    }
     #else
         graphics_context_set_fill_color(ctx, s_back_color);
         graphics_fill_circle(ctx, center, 3);
@@ -590,6 +596,23 @@ static void date_update_proc(Layer *layer, GContext *ctx)
   strftime(s_num_buffer, sizeof(s_num_buffer), "%d", t);
   text_layer_set_text(s_num_label, s_num_buffer);
     
+  if(bluetooth_connection_service_peek()){
+       graphics_context_set_stroke_color(ctx, s_fore_special);
+       graphics_context_set_stroke_width(ctx,  1 );
+      GPoint bt_start =
+        {
+        .x = 58,
+        .y = 53,
+        };
+       GPoint bt_end =
+        {
+        .x = 85,
+        .y = 53,
+        };
+
+       graphics_draw_line2(ctx, bt_start, bt_end);
+  }
+    
 }
 
 static void request_weather(void) {
@@ -628,8 +651,9 @@ static void handle_tap(AccelAxisType axis, int32_t direction){
     if(s_cur_color_scheme > 5){
         s_cur_color_scheme = 0;
     }
-
+    APP_LOG(APP_LOG_LEVEL_INFO, "before set %d %d", (int)s_cur_color_scheme, (int) s_cur_color_type);
     set_color_scheme();
+    APP_LOG(APP_LOG_LEVEL_INFO, "after set %d %d", (int)s_cur_color_scheme, (int) s_cur_color_type);
     layer_mark_dirty(s_hands_layer);
     persist_write_int(COLOR_SCHEME_KEY , s_cur_color_scheme);
     persist_write_int(COLOR_TYPE_KEY , s_cur_color_type);
@@ -679,11 +703,16 @@ static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tup
   else if(key == PHONE_TEMP_TYPE_KEY){
       s_cur_temp_type = new_tuple->value->int32;
   }
+  else if(key == PHONE_SECONDS_KEY){
+      s_show_seconds = new_tuple->value->int32;
+      APP_LOG(APP_LOG_LEVEL_INFO, "seconds %d", (int)s_show_seconds);
+  }
     set_color_scheme();
     layer_mark_dirty(s_hands_layer);
     persist_write_int(COLOR_SCHEME_KEY , s_cur_color_scheme);
     persist_write_int(COLOR_TYPE_KEY , s_cur_color_type);
     persist_write_int(TEMP_TYPE_KEY , s_cur_temp_type);
+    persist_write_int(SECONDS_KEY, s_show_seconds);
 }
 
 
@@ -716,6 +745,14 @@ static void window_load(Window *window)
   {
       s_cur_color_scheme = 0;
   }
+    
+  if(persist_exists(SECONDS_KEY)){
+      s_show_seconds = persist_read_int(SECONDS_KEY);
+  }
+  else{
+      s_show_seconds = 1;      
+  }
+  
   
   APP_LOG(APP_LOG_LEVEL_INFO, "after load %d", (int)s_cur_color_scheme);
   set_color_scheme();
@@ -731,7 +768,7 @@ static void window_load(Window *window)
   layer_set_update_proc(s_date_layer, date_update_proc);
   layer_add_child(window_layer, s_date_layer);
     
-  s_pebble_label = text_layer_create(GRect(51, 40, 40, 20));
+  s_pebble_label = text_layer_create(GRect(51, 37, 40, 20));
   text_layer_set_text(s_pebble_label, "pebble");
   text_layer_set_background_color(s_pebble_label, GColorClear);
   text_layer_set_text_color(s_pebble_label, s_fore_color);
@@ -784,7 +821,8 @@ static void window_load(Window *window)
     TupletCString(PHONE_TEMPERATURE_C_KEY, "---"),
     TupletInteger(PHONE_CLOUDS_KEY, (int32_t)0),
     TupletInteger(PHONE_COLOR_KEY, (int32_t)s_cur_color_type),
-    TupletInteger(PHONE_TEMP_TYPE_KEY, (int32_t)s_cur_temp_type)
+    TupletInteger(PHONE_TEMP_TYPE_KEY, (int32_t)s_cur_temp_type),
+    TupletInteger(PHONE_SECONDS_KEY,(int32_t)s_show_seconds)
   };
     
     app_sync_init(&s_sync, s_sync_buffer, sizeof(s_sync_buffer),

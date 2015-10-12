@@ -2,6 +2,7 @@
     "appKeys": {
         "PHONE_CLOUDS_KEY": 1,
         "PHONE_COLOR_KEY": 2,
+        "PHONE_SECONDS_KEY": 5,
         "PHONE_TEMPERATURE_C_KEY": 4,
         "PHONE_TEMPERATURE_KEY": 0,
         "PHONE_TEMP_TYPE_KEY": 3
@@ -30,7 +31,7 @@
         "basalt"
     ],
     "uuid": "8cb60441-3eb3-47b1-a6eb-d35b3f1f4a33",
-    "versionLabel": "1.4",
+    "versionLabel": "1.5",
     "watchapp": {
         "watchface": true
     }

@@ -61,7 +61,18 @@ Pebble.addEventListener('appmessage', function (e) {
 });
 
 Pebble.addEventListener('showConfiguration', function() {
-  var url = 'https://cdn.rawgit.com/johnmillage/FancyFace/f2da62db3d29b3a9c1a3f5bb1c53e61199138cb7/PebbleConfig.html';
+    var version = 'aplite';
+    if(Pebble.getActiveWatchInfo) {
+          // Available for use!
+        version = Pebble.getActiveWatchInfo().platform;
+    }
+  if(version == 'basalt'){
+      var url = 'https://cdn.rawgit.com/johnmillage/FancyFace/beac0745fc06b4bf0d40ae57062818cfc51cd5c9/PebbleConfig.html';
+  }
+  else{
+      var url = 'https://cdn.rawgit.com/johnmillage/FancyFace/b6b939adf8a8bcdc8b1c15a9f4e1c92dab3978e8/PebbleConfigAplite.html';
+  }
+  
   console.log('Showing configuration page: ' + url);
 
   Pebble.openURL(url);
@@ -73,12 +84,19 @@ Pebble.addEventListener('webviewclosed', function(e) {
 
   var backgroundColor = configData['background_color'];
   var tempType = configData['temperature_type'];
-  
+  var showSeconds = configData['seconds_type'];
   var colors = {'All' : 0, 'Darks': 1, 'Lights': 2, 'White': 3, 'Black': 4, 'Blue': 5, 'Yellow': 6, 'Green': 7, 'Red': 8};
     
   var dict = {};
     
     dict['PHONE_COLOR_KEY'] = colors[backgroundColor];
+    if(showSeconds == "OFF"){
+        dict['PHONE_SECONDS_KEY'] = 0;
+    }
+    else{
+         dict['PHONE_SECONDS_KEY'] = 1;
+    }
+    
     if(tempType == 'Celsius'){
         dict['PHONE_TEMP_TYPE_KEY'] = 1;
     }
